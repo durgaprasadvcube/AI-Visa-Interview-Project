@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { Suspense } from 'react';
 import { useSearchParams, useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
