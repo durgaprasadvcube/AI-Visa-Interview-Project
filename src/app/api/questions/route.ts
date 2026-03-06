@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDefaultQuestions } from '@/lib/questions';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // Need service role to bypass some RLS if user isn't fully authenticated yet, or just use anon key if RLS allows it.
-const supabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
     try {
+        const supabase = await createClient();
         const { searchParams } = new URL(req.url);
         const interviewId = searchParams.get('interview_id');
         const isDemo = searchParams.get('is_demo') === 'true';
