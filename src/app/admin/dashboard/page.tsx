@@ -6,8 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure pdf.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+export const dynamic = 'force-dynamic';
 
 interface Profile {
     id: string;
@@ -65,18 +64,24 @@ export default function AdminDashboardPage() {
     const [editingId, setEditingId] = useState<string | null>(null);
 
     const router = useRouter();
-    const supabase = createClient();
+    const [supabase, setSupabase] = useState<any>(null);
 
     useEffect(() => {
+        // Configure pdf.js worker (browser only)
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+        const client = createClient();
+        setSupabase(client);
+
         const checkAdminAndLoadData = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await client.auth.getSession();
             if (!session) {
                 router.push('/admin/login');
                 return;
             }
 
             // Verify admin role
-            const { data: profile } = await supabase
+            const { data: profile } = await client
                 .from('profiles')
                 .select('role')
                 .eq('id', session.user.id)
@@ -87,16 +92,19 @@ export default function AdminDashboardPage() {
                 return;
             }
 
-            await loadDashboardData();
+            await loadDashboardData(client);
         };
 
         checkAdminAndLoadData();
     }, [router]);
 
-    const loadDashboardData = async () => {
+    const loadDashboardData = async (clientInstance?: any) => {
+        const activeClient = clientInstance || supabase;
+        if (!activeClient) return;
+
         try {
             // 1. Get all students
-            const { data: studentsData } = await supabase
+            const { data: studentsData } = await activeClient
                 .from('profiles')
                 .select('*')
                 .eq('role', 'student');
@@ -104,36 +112,36 @@ export default function AdminDashboardPage() {
             if (studentsData) setProfiles(studentsData);
 
             // 2. Get scheduling info
-            const { data: scheduleData } = await supabase
+            const { data: scheduleData } = await activeClient
                 .from('scheduled_interviews')
                 .select('*')
                 .order('start_time', { ascending: false });
 
             if (scheduleData && studentsData) {
-                const mappedSchedules = scheduleData.map(s => ({
+                const mappedSchedules = scheduleData.map((s: any) => ({
                     ...s,
-                    student_email: studentsData.find(st => st.id === s.student_id)?.email || 'Unknown'
+                    student_email: studentsData.find((st: any) => st.id === s.student_id)?.email || 'Unknown'
                 }));
                 setSchedules(mappedSchedules);
             }
 
             // 3. Get all completed interviews
-            const { data: interviewsData } = await supabase
+            const { data: interviewsData } = await activeClient
                 .from('interviews')
                 .select('*')
                 .not('end_time', 'is', null)
                 .order('end_time', { ascending: false });
 
             if (interviewsData && studentsData) {
-                const mappedResults = interviewsData.map(r => ({
+                const mappedResults = interviewsData.map((r: any) => ({
                     ...r,
-                    user_email: studentsData.find(st => st.id === r.user_id)?.email || 'Unknown/Admin'
+                    user_email: studentsData.find((st: any) => st.id === r.user_id)?.email || 'Unknown/Admin'
                 }));
                 setResults(mappedResults);
             }
 
             // 4. Get Question Banks
-            const { data: banksData } = await supabase
+            const { data: banksData } = await activeClient
                 .from('question_banks')
                 .select('*')
                 .order('created_at', { ascending: false });
@@ -149,7 +157,7 @@ export default function AdminDashboardPage() {
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file || !supabase) return;
 
         setUploadingPdf(true);
         try {
@@ -205,6 +213,7 @@ export default function AdminDashboardPage() {
 
     const handleScheduleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!supabase) return;
         setScheduling(true);
 
         try {
@@ -315,6 +324,7 @@ export default function AdminDashboardPage() {
     };
 
     const handleSignOut = async () => {
+        if (!supabase) return;
         await supabase.auth.signOut();
         router.push('/');
     };
