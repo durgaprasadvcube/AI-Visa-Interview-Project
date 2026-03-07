@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { SAMPLE_VISA_QUESTIONS } from '@/data/sample-questions';
 
 interface Question {
-    id: number;
+    id: string | number;
     category: string;
     question: string;
     tips: string;
@@ -80,8 +80,8 @@ export default function AdminQuestionsPage() {
                 {/* Upload Zone */}
                 <div
                     className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all ${dragOver
-                            ? 'border-primary-400 bg-primary-900/20'
-                            : 'border-surface-600 bg-surface-800/30 hover:border-primary-600/50'
+                        ? 'border-primary-400 bg-primary-900/20'
+                        : 'border-surface-600 bg-surface-800/30 hover:border-primary-600/50'
                         }`}
                     onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                     onDragLeave={() => setDragOver(false)}
