@@ -15,6 +15,7 @@
     "clsx": "^2.1.1",
     "face-api.js": "^0.22.2",
     "framer-motion": "^11.18.2",
+    "googleapis": "^171.4.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",
     "lucide-react": "^0.474.0",
