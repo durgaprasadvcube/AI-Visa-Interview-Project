@@ -139,6 +139,7 @@ export default function AdminDashboardPage() {
     const [interviewType, setInterviewType] = useState('official');
     const [selectedBankId, setSelectedBankId] = useState('');
     const [scheduling, setScheduling] = useState(false);
+    const [isEntireDay, setIsEntireDay] = useState(false);
 
     // Upload State
     const [uploadingPdf, setUploadingPdf] = useState(false);
@@ -304,8 +305,15 @@ export default function AdminDashboardPage() {
             if (!user) throw new Error("Not authenticated");
 
             // Combine date and time
-            const startDateTimeObj = new Date(`${scheduleDate}T${startTime}`);
-            const endDateTimeObj = new Date(`${scheduleDate}T${endTime}`);
+            let startDateTimeObj, endDateTimeObj;
+
+            if (isEntireDay) {
+                startDateTimeObj = new Date(`${scheduleDate}T00:00:00`);
+                endDateTimeObj = new Date(`${scheduleDate}T23:59:59`);
+            } else {
+                startDateTimeObj = new Date(`${scheduleDate}T${startTime}`);
+                endDateTimeObj = new Date(`${scheduleDate}T${endTime}`);
+            }
 
             if (startDateTimeObj >= endDateTimeObj) {
                 throw new Error("End time must be after start time.");
@@ -394,6 +402,13 @@ export default function AdminDashboardPage() {
 
         // Scroll to form
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Auto-check entire day logic
+        if (hours === '00' && mins === '00' && endHours === '23' && endMins === '59') {
+            setIsEntireDay(true);
+        } else {
+            setIsEntireDay(false);
+        }
     };
 
     const resetForm = () => {
@@ -404,6 +419,7 @@ export default function AdminDashboardPage() {
         setEndTime('');
         setInterviewType('official');
         setSelectedBankId('');
+        setIsEntireDay(false);
     };
 
     const handleSignOut = async () => {
@@ -578,26 +594,44 @@ export default function AdminDashboardPage() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider pl-1">Start Time</label>
-                                    <input
-                                        type="time" required
-                                        value={startTime}
-                                        onChange={(e) => setStartTime(e.target.value)}
-                                        className="w-full bg-surface-800/80 border border-surface-600 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-inner"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider pl-1">End Time</label>
-                                    <input
-                                        type="time" required
-                                        value={endTime}
-                                        onChange={(e) => setEndTime(e.target.value)}
-                                        className="w-full bg-surface-800/80 border border-surface-600 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-inner"
-                                    />
-                                </div>
-                            </div>
+                            <label className="flex items-center gap-2 cursor-pointer pt-2 group">
+                                <input
+                                    type="checkbox"
+                                    checked={isEntireDay}
+                                    onChange={(e) => {
+                                        setIsEntireDay(e.target.checked);
+                                        if (e.target.checked) {
+                                            setStartTime('00:00');
+                                            setEndTime('23:59');
+                                        }
+                                    }}
+                                    className="w-4 h-4 rounded border-surface-600 text-primary-500 focus:ring-primary-500 bg-surface-800"
+                                />
+                                <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">Valid for Entire Day (Midnight to Midnight)</span>
+                            </label>
+
+                            {!isEntireDay && (
+                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-2 gap-4 origin-top">
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider pl-1">Start Time</label>
+                                        <input
+                                            type="time" required={!isEntireDay}
+                                            value={startTime}
+                                            onChange={(e) => setStartTime(e.target.value)}
+                                            className="w-full bg-surface-800/80 border border-surface-600 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-inner"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider pl-1">End Time</label>
+                                        <input
+                                            type="time" required={!isEntireDay}
+                                            value={endTime}
+                                            onChange={(e) => setEndTime(e.target.value)}
+                                            className="w-full bg-surface-800/80 border border-surface-600 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-inner"
+                                        />
+                                    </div>
+                                </motion.div>
+                            )}
 
                             <div className="flex gap-3 mt-4">
                                 {editingId && (
