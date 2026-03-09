@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
             category: 'Introduction',
             question: 'Could you please tell me your full name?',
             tips: 'Just state your name clearly.',
-            timeSeconds: 30
+            timeSeconds: 20
         };
 
         const introQuestion = {
