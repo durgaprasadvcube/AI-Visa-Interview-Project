@@ -33,6 +33,7 @@ function InterviewSessionContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const interviewId = searchParams.get('id');
+    const scheduleId = searchParams.get('schedule_id');
     const isDemo = searchParams.get('demo') === 'true';
 
     const [questions, setQuestions] = useState<VisaQuestion[]>([]);
@@ -47,7 +48,9 @@ function InterviewSessionContent() {
     const [phase, setPhase] = useState<'reading' | 'answering' | 'evaluating' | 'uploading'>('reading');
     const [spokenText, setSpokenText] = useState('');
     const [questionKey, setQuestionKey] = useState(0);
+    const [showRules, setShowRules] = useState(true);
     const transcriptRef = useRef('');
+    const startTimeRef = useRef(Date.now());
     const processingRef = useRef(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
@@ -95,6 +98,17 @@ function InterviewSessionContent() {
             .finally(() => setQuestionsLoaded(true));
     }, [interviewId, isDemo]);
 
+    // Authentication Enforcement
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { user } } = await (await import('@/lib/supabase/client')).createClient().auth.getUser();
+            if (!user) {
+                router.push('/auth');
+            }
+        };
+        checkAuth();
+    }, [router]);
+
     // Log alert to Supabase
     const logAlert = useCallback(async (type: string) => {
         setAlertEvents((prev) => [...prev, { type, time: new Date() }]);
@@ -110,15 +124,17 @@ function InterviewSessionContent() {
     }, [interviewId, isDemo]);
 
     const handleFaceAlert = useCallback((type: 'multiple_faces' | 'no_face' | 'left_frame' | 'eye_movement') => {
+        if (showRules) return; // Skip alerts while reading rules
         const messages = {
             multiple_faces: '⚠️ Multiple people detected. This will be flagged.',
-            no_face: '⚠️ Face not detected. Please stay in frame.',
+            no_face_detected: '⚠️ Face not detected. Please stay in frame.',
             left_frame: '⚠️ You left the camera frame.',
             eye_movement: '⚠️ Please look directly at the camera.',
         };
-        setAlertMessage(messages[type]);
-        logAlert(type);
-    }, [logAlert]);
+        const msg = type === 'no_face' ? messages.no_face_detected : messages[type as keyof typeof messages];
+        setAlertMessage(msg);
+        logAlert(type === 'no_face' ? 'no_face_detected' : type);
+    }, [logAlert, showRules]);
 
     const handleTranscriptUpdate = useCallback((text: string, isFinal: boolean) => {
         if (isFinal) {
@@ -257,7 +273,8 @@ function InterviewSessionContent() {
                         body: JSON.stringify({
                             interview_id: interviewId,
                             final_score: avgScore,
-                            recording_url: recordingUrl
+                            recording_url: recordingUrl,
+                            schedule_id: scheduleId
                         }),
                     });
                 } catch { }
@@ -298,7 +315,10 @@ function InterviewSessionContent() {
         if (sessionComplete) return;
 
         const handleFocusLoss = () => {
+            if (showRules) return; // Skip focus loss alerts while reading rules
             const now = Date.now();
+            // Grace period: No alerts for the first 5 seconds after page load
+            if (now - startTimeRef.current < 5000) return;
             // Debounce alerts (only once every 3 seconds)
             if (now - lastAlertTimeRef.current < 3000) return;
 
@@ -320,11 +340,11 @@ function InterviewSessionContent() {
             window.removeEventListener('blur', handleFocusLoss);
             document.removeEventListener('visibilitychange', onVisibilityChange);
         };
-    }, [sessionComplete, logAlert]);
+    }, [sessionComplete, logAlert, showRules]);
 
     // Handle initial read-aloud of questions using TTS
     useEffect(() => {
-        if (phase !== 'reading' || !currentQuestion || sessionComplete) return;
+        if (showRules || phase !== 'reading' || !currentQuestion || sessionComplete) return;
 
         let isCancelled = false;
         let timeoutId: NodeJS.Timeout;
@@ -397,7 +417,7 @@ function InterviewSessionContent() {
                 window.speechSynthesis.cancel();
             }
         };
-    }, [currentIdx, currentQuestion, phase, sessionComplete]);
+    }, [currentIdx, currentQuestion, phase, sessionComplete, showRules]);
 
     // Navigate to result when complete
     useEffect(() => {
@@ -448,11 +468,122 @@ function InterviewSessionContent() {
 
     return (
         <div className="min-h-screen flex flex-col">
+            {/* Rules Modal Overlay */}
+            <AnimatePresence>
+                {showRules && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-surface-950/90 backdrop-blur-xl"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            className="w-full max-w-4xl max-h-[min(90vh,800px)] glass-dark border border-surface-700 rounded-3xl p-0 shadow-2xl relative overflow-hidden flex flex-col md:flex-row"
+                        >
+                            {/* Left Side: Illustration */}
+                            <div className="hidden md:flex md:w-5/12 relative bg-gradient-to-br from-primary-600/20 to-surface-950 border-r border-surface-800 items-center justify-center p-8 overflow-hidden shrink-0">
+                                <div className="absolute inset-0 opacity-20 pointer-events-none">
+                                    <div className="absolute top-0 left-0 w-48 h-48 bg-primary-500 rounded-full blur-[100px]" />
+                                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-accent-500 rounded-full blur-[100px]" />
+                                </div>
+                                <img
+                                    src="/interview_guidelines_illustration.png"
+                                    alt="Interview Guidelines"
+                                    className="relative z-10 w-full max-w-[320px] drop-shadow-2xl animate-float"
+                                />
+                                {/* Bottom Accent */}
+                                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-500 to-accent-500/50" />
+                            </div>
+
+                            {/* Right Side: Content */}
+                            <div className="flex-1 p-6 md:p-10 flex flex-col relative overflow-y-auto custom-scrollbar scroll-smooth overscroll-contain min-h-0">
+                                <button
+                                    onClick={() => setShowRules(false)}
+                                    className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all z-20 group"
+                                    aria-label="Close"
+                                >
+                                    <span className="text-2xl group-hover:scale-110 transition-transform">✕</span>
+                                </button>
+                                <div className="mb-8">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-8 h-px bg-primary-500" />
+                                        <span className="text-xs font-bold text-primary-400 uppercase tracking-[0.2em]">Guidelines</span>
+                                    </div>
+                                    <h2 className="text-3xl font-bold text-white leading-tight">Interview Rules</h2>
+                                    <p className="text-slate-400 text-sm">Follow these instructions for the best AI evaluation experience.</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-6 flex-1">
+                                    <section>
+                                        <h3 className="text-sm font-bold text-green-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                            <span className="w-5 h-5 rounded-lg bg-green-400/10 flex items-center justify-center text-[10px]">✅</span> Do's
+                                        </h3>
+                                        <ul className="space-y-2.5">
+                                            {[
+                                                "Speak clearly and at a moderate pace",
+                                                "Maintain eye contact with the camera",
+                                                "Ensure a quiet and well-lit background",
+                                                "Wait for 'Listening' status before talking"
+                                            ].map((item, i) => (
+                                                <li key={i} className="text-sm text-slate-300 flex items-start gap-3">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-1.5 shrink-0" />
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </section>
+
+                                    <section>
+                                        <h3 className="text-sm font-bold text-danger-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                            <span className="w-5 h-5 rounded-lg bg-danger-400/10 flex items-center justify-center text-[10px]">❌</span> Don'ts
+                                        </h3>
+                                        <ul className="space-y-2.5">
+                                            {[
+                                                "Do not use external aids or notes",
+                                                "Do not look away from the screen",
+                                                "Do not switch tabs or minimize window"
+                                            ].map((item, i) => (
+                                                <li key={i} className="text-sm text-slate-300 flex items-start gap-3">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-danger-500 mt-1.5 shrink-0" />
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </section>
+                                </div>
+
+                                <div className="mt-8 pt-6 border-t border-surface-800 shrink-0">
+                                    <div className="p-4 rounded-xl bg-primary-500/5 border border-primary-500/10 flex items-start gap-3 mb-6">
+                                        <div className="w-8 h-8 rounded-lg bg-primary-500/10 flex items-center justify-center shrink-0">
+                                            <span className="text-lg">💡</span>
+                                        </div>
+                                        <p className="text-xs text-slate-300 leading-relaxed">
+                                            <strong className="text-white">Crucial:</strong> Wait for the status box to show
+                                            <span className="bg-primary-500/20 px-2 py-0.5 rounded text-primary-400 font-bold mx-1 text-[10px]">Listening</span>
+                                            before you start speaking.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setShowRules(false)}
+                                        className="w-full py-4 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-bold rounded-xl shadow-xl shadow-primary-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 group"
+                                    >
+                                        <span>Start Interview Session</span>
+                                        <span className="text-xl group-hover:translate-x-1 transition-transform">→</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             {/* Top Bar */}
             <div className="glass-dark border-b border-surface-700 px-6 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <span className="text-xl">🎓</span>
-                    <span className="font-semibold text-white">VisaPrep AI</span>
+                    <span className="font-semibold text-white">Guideuni AI Interview</span>
                     <span className="text-slate-500">|</span>
                     <span className="text-slate-400 text-sm">Live Interview</span>
                 </div>
