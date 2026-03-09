@@ -56,7 +56,7 @@ export default function LandingPage() {
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-lg">
                             🎓
                         </div>
-                        <span className="font-bold text-lg text-white">VisaPrep AI</span>
+                        <span className="font-bold text-lg text-white">Guideuni AI Interview</span>
                     </div>
                     <div className="flex items-center gap-4">
                         <Link href="/auth" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
@@ -233,10 +233,10 @@ export default function LandingPage() {
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-2 text-slate-400 text-sm">
                         <span>🎓</span>
-                        <span>VisaPrep AI — Built for students, by AI</span>
+                        <span>Guideuni AI Interview — Built for students, by Guideuni</span>
                     </div>
                     <div className="text-slate-500 text-sm">
-                        © 2026 VisaPrep AI. All rights reserved.
+                        © 2026 Guideuni AI Interview. All rights reserved.
                     </div>
                 </div>
             </footer>
