@@ -2,13 +2,13 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-    title: 'AI Visa Interview Simulator | Practice Your Study Visa Interview',
+    title: 'Guideuni AI Interview | Master Your Study Visa Preparation',
     description:
-        'Prepare for your study visa interview with AI-powered question practice, real-time speech recognition, face monitoring, and personalized feedback. Build confidence before the real interview.',
-    keywords: 'visa interview, study visa, AI interview practice, visa preparation, student visa',
+        'Prepare for your study visa interview with Guideuni AI Interview. AI-powered question practice, real-time speech recognition, and personalized feedback to build your confidence.',
+    keywords: 'Guideuni, visa interview, study visa, AI interview practice, visa preparation, student visa',
     openGraph: {
-        title: 'AI Visa Interview Simulator',
-        description: 'Ace your study visa interview with AI-powered practice sessions',
+        title: 'Guideuni AI Interview',
+        description: 'Ace your study visa interview with AI-powered practice sessions by Guideuni',
         type: 'website',
     },
 };
