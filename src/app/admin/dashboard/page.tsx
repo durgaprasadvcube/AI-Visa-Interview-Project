@@ -453,7 +453,7 @@ export default function AdminDashboardPage() {
                         </div>
                         <div>
                             <h1 className="text-xl font-bold text-white leading-tight">Admin Portal</h1>
-                            <p className="text-xs text-slate-400">VisaPrep AI Dashboard</p>
+                            <p className="text-xs text-slate-400">Guideuni AI Interview Dashboard</p>
                         </div>
                     </div>
                     <button
