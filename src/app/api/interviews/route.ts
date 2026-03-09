@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { total_questions } = body;
+        const { total_questions, schedule_id } = body;
 
         const { data, error } = await supabase
             .from('interviews')
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
                 user_id: user.id,
                 start_time: new Date().toISOString(),
                 total_questions: total_questions || 10,
+                schedule_id: schedule_id || null,
             })
             .select()
             .single();
@@ -45,7 +46,7 @@ export async function PATCH(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { interview_id, final_score, recording_url } = body;
+        const { interview_id, final_score, recording_url, schedule_id } = body;
 
         const updateData: any = {
             end_time: new Date().toISOString(),
@@ -65,6 +66,14 @@ export async function PATCH(req: NextRequest) {
             .single();
 
         if (error) throw error;
+
+        // If there's an associated schedule, mark it as completed server-side
+        if (schedule_id) {
+            await supabase
+                .from('scheduled_interviews')
+                .update({ status: 'completed' })
+                .eq('id', schedule_id);
+        }
 
         return NextResponse.json({ interview: data });
     } catch (error) {
