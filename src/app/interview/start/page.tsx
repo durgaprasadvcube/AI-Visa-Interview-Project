@@ -197,21 +197,18 @@ export default function StartInterviewPage() {
             const res = await fetch('/api/interviews', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ total_questions: 10 }),
+                body: JSON.stringify({
+                    total_questions: 10,
+                    schedule_id: schedule?.id
+                }),
             });
 
             const data = await res.json();
 
-            if (schedule) {
-                await supabase
-                    .from('scheduled_interviews')
-                    .update({ status: 'completed' })
-                    .eq('id', schedule.id);
-            }
-
             if (data.interview?.id) {
                 stream?.getTracks().forEach((t) => t.stop());
-                router.push(`/interview/session?id=${data.interview.id}`);
+                const sessionUrl = `/interview/session?id=${data.interview.id}${schedule ? `&schedule_id=${schedule.id}` : ''}`;
+                router.push(sessionUrl);
             } else {
                 throw new Error("Failed to create interview");
             }
